@@ -52,8 +52,15 @@ class CommonOrchestrator(OrchestratorBase):
         await self.fsm.set_state(user.telegram_id, State.IDLE)
         new_text = MAIN_MENU_TEXT.format(user.username)
         new_buttons = await main_menu_keyboard()
-        await event.edit(new_text, buttons=new_buttons)
+        message = await event.edit(new_text, buttons=new_buttons)
         await event.answer()  # закрыть "часики"
+        await self.fsm.set_state(
+            user.telegram_id,
+            State.START,
+            meta=ExpenseMeta(
+                message_id=message.id,
+            )
+        )
 
 
     async def handle_cancel(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
@@ -62,7 +69,7 @@ class CommonOrchestrator(OrchestratorBase):
         await event.answer()
 
 
-    # Я тут но могу же вернуться в start_flow а не сюда ⬇️
+    # Я тут, но могу же вернуться в start_flow а не сюда ⬇️
     # TODO: если вернуться в start_flow, то нужно подумать, как не удалять сообщение
     async def back_to_main_menu(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         await self.fsm.set_state(user.telegram_id, State.START)

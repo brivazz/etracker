@@ -72,7 +72,7 @@ class BotService:
             State.IDLE: self.common_orchestrator.start_flow,
             State.START: self.common_orchestrator.start_flow,
             State.ADD_EXPENSE: self.add_orchestrator.add_expense,  # Тут после нажатия Добавить трату
-            State.EDIT_LAST_EXPENSE: self.add_orchestrator.handle_amount_expense,
+            State.EDIT_LAST_EXPENSE: self.add_orchestrator.handle_edit_expense,
             State.WAITING_FOR_CATEGORY: self.category_orchestrator.handle_add_category,
             State.SELECTED_A_CATEGORY: self.add_orchestrator.handle_amount_expense,
             State.CHANGE_ENTRY: self.add_orchestrator.handle_amount_expense,

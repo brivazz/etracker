@@ -10,6 +10,7 @@ class ExpenseCreateDTO(BaseModel):
 
 class ExpenseInDBDTO(ExpenseCreateDTO):
     id: int | None = Field(default=None)
+    category_name: str | None = Field(default=None)
     created_at: datetime
     updated_at: datetime
 

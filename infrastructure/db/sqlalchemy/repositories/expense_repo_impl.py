@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import select, delete, update as sqlalchemy_update, func, Result, Sequence, Row, text, literal
+from sqlalchemy import select, delete, update as sqlalchemy_update, func, Result, Sequence, Row, text, literal, desc
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from domain.entities.expense import ExpenseCreate, ExpenseInDB, ExpenseHistory
 from domain.entities.stats import StatsInDb
@@ -34,6 +35,26 @@ class SQLAlchemyExpenseRepository(AbstractExpenseRepository):
             return None
         return await self.expense_indb_mapper.orm_to_entity(result)
 
+    async def get_last(self) -> ExpenseInDB | None:
+        stmt = (
+            select(
+                ExpenseORM,
+                CategoryORM.name.label("category_name")
+            )
+            .join(CategoryORM, ExpenseORM.category)
+            .order_by(desc(ExpenseORM.id))
+            .limit(1)
+        )
+        result = await self.session.execute(stmt)
+        row = result.one_or_none()
+        if not row:
+            return None
+        expense_orm, category_name = row
+        last_expense = await self.expense_indb_mapper.orm_to_entity(expense_orm)
+        last_expense.category_name = category_name
+        return last_expense
+
+
     async def delete(self, expense_id: int) -> bool:
         result = await self.session.execute(
             delete(ExpenseORM).where(ExpenseORM.id == expense_id)
@@ -62,7 +83,6 @@ class SQLAlchemyExpenseRepository(AbstractExpenseRepository):
         return await self.expense_indb_mapper.orm_to_entity(orm_instance)
 
     async def get_stats(self, user_id: int, from_date: datetime) -> list[StatsInDb]:
-            print('USER_ID:', user_id, 'FROM_DATE:', from_date)
             stmt = (
                 select(
                     CategoryORM.name,
@@ -78,7 +98,6 @@ class SQLAlchemyExpenseRepository(AbstractExpenseRepository):
 
             result: Result[tuple[str, float]] = await self.session.execute(stmt)
             rows = result.all()
-            print('rows get_stats:', rows)
 
             return [
                 StatsInDb(category_name=row[0], total_amount=float(row[1] or 0))
@@ -133,37 +152,3 @@ class SQLAlchemyExpenseRepository(AbstractExpenseRepository):
             )
             for row in rows
         ]
-
-
-    # async def get_expense_history(self, user_id: int) -> list[ExpenseHistoryDTO]:
-    #     result = await self.session.execute(
-    #         select(
-    #             func.date_trunc("day", ExpenseORM.created_at).label("date"),
-    #             CategoryORM.name.label("category_name"),
-    #             func.count().label("count"),
-    #             func.sum(ExpenseORM.amount).label("total_amount")
-    #         )
-    #         .join(CategoryORM, CategoryORM.id == ExpenseORM.category_id)
-    #         .where(ExpenseORM.user_id == user_id)
-    #         .group_by("date", "category_name")
-    #         .order_by("date DESC")
-    #     )
-    #     rows = result.fetchall()
-    #     return [
-    #         ExpenseHistoryDTO(
-    #             date=row.date,
-    #             category_name=row.category_name,
-    #             count=row.count,
-    #             total_amount=row.total_amount,
-    #             period="day"
-    #         )
-    #         for row in rows
-    #     ]
-
-
-# session.query(ExpenseORM).filter(ExpenseORM.category.has(name="Еда"))
-# или:
-
-# category = session.get(CategoryORM, 1)
-# for expense in category.expenses:
-#     print(expense.amount)

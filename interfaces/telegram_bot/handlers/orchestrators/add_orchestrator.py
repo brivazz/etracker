@@ -54,7 +54,7 @@ class AddOrchestrator(OrchestratorBase):
                 text=new_text,
                 buttons=new_buttons
             )
-        except MessageIdInvalidError:
+        except (MessageIdInvalidError, MessageNotModifiedError):
             pass
         logger.warning("❗️❗️❗️ В кнопке Добавить трату")
         await self.fsm.set_state(
@@ -100,7 +100,7 @@ class AddOrchestrator(OrchestratorBase):
             logger.info(
                 f"User {user.telegram_id} added expense: {amount} in category {category_name} (id={category_id})")
             return
-        # Сюда попали если были в состоянии SELECTED_A_CATEGORY
+        # Сюда попали если были в состоянии SELECTED_A_CATEGORY и CHANGE_ENTRY
         # и удаляем сумму, написанную пользователем
         await event.message.delete()
         """Перед сохранением/записью новой траты."""
@@ -172,8 +172,9 @@ class AddOrchestrator(OrchestratorBase):
 
     async def edit_last_expense(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Тут после нажатия на редактирование последней траты."""
-        meta = ExpenseMeta(**await self.fsm.get_meta(user.telegram_id))
-        if not meta.expense_id:
+        dto = ExpenseCreateDTO(user_id=user.id, amount=0.0, category_id=0, note="")
+        last_expense = cast(ExpenseInDBDTO, await self._handle(Command.GET_LAST_EXPENSE, dto))
+        if not last_expense:
             await show_error_keyboard(event, text="❗ Нет последней траты для редактирования.")
             return
         message = await edit_last_expense_keyboard(event)
@@ -181,10 +182,10 @@ class AddOrchestrator(OrchestratorBase):
             user.telegram_id,
             State.EDIT_LAST_EXPENSE,
             meta=ExpenseMeta(
-                expense_id=meta.expense_id,
-                amount=meta.amount,
-                category_id=meta.category_id,
-                category_name=meta.category_name,
+                expense_id=last_expense.id,
+                amount=last_expense.amount,
+                category_id=last_expense.category_id,
+                category_name=last_expense.category_name,
                 message_id=message.id,
             )
         )
@@ -202,15 +203,15 @@ class AddOrchestrator(OrchestratorBase):
         expense = cast(ExpenseInDBDTO, await self._handle(Command.EDIT_EXPENSE, dto))
 
         await event.message.delete()
-        await after_input_amount_for_edit_expense_keyboard(event, new_amount, meta.message_id)
+        await after_input_amount_for_edit_expense_keyboard(event, new_amount, meta.message_id, meta.category_name)
         await self.fsm.set_state(
             user.telegram_id,
             State.EXPENSE_RECORDED,
             meta=ExpenseMeta(
                 expense_id=expense.id,
                 amount=meta.amount,
-                category_id=meta.category_id,
-                category_name=meta.category_name,
+                category_id=expense.category_id,
+                category_name=expense.category_name,
                 message_id=meta.message_id,
             )
         )
@@ -220,15 +221,18 @@ class AddOrchestrator(OrchestratorBase):
 
     async def handle_repeat_last_expense(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Тут после нажатия Повторить последнюю."""
+        # Получаем последнюю
         meta = ExpenseMeta(**await self.fsm.get_meta(user.telegram_id))
-        if not meta.expense_id:
+        dto = ExpenseCreateDTO(user_id=user.id, amount=0.0, category_id=0, note="")
+        last_expense = cast(ExpenseInDBDTO, await self._handle(Command.GET_LAST_EXPENSE, dto))
+        if not last_expense:
             await show_error_keyboard(event, text="❗ Нет последней траты для повторения.")
             return
-        
-        dto = ExpenseCreateDTO(user_id=user.id, amount=meta.amount, category_id=meta.category_id, note="(повтор)")
+        # Выполняем повтор траты
+        dto = ExpenseCreateDTO(user_id=user.id, amount=last_expense.amount, category_id=last_expense.category_id, note="(повтор)")
         expense = cast(ExpenseInDBDTO, await self._handle(Command.ADD_EXPENSE, dto))
 
-        await after_repeat_last_expense_keyboard(event, expense.amount, expense.category_name)
+        await after_repeat_last_expense_keyboard(event, expense.amount, last_expense.category_name)
         await self.fsm.set_state(
             user.telegram_id,
             State.REPEAT_EXPENSE,
@@ -247,14 +251,17 @@ class AddOrchestrator(OrchestratorBase):
     async def handle_delete_last_expense(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Тут после нажатия Удалить последнюю."""
         meta = ExpenseMeta(**await self.fsm.get_meta(user.telegram_id))
-        if not meta.expense_id:
+        dto = ExpenseCreateDTO(user_id=user.id, amount=0.0, category_id=0, note="")
+        last_expense = cast(ExpenseInDBDTO, await self._handle(Command.GET_LAST_EXPENSE, dto))
+        if not last_expense:
             await show_error_keyboard(event, text="❗ Нет последней траты для удаления.")
             return
-
-        dto = ExpenseDeleteDTO(id=meta.expense_id)
+        last_expense_category_name = last_expense.category_name
+        last_expense_amount = last_expense.amount
+        dto = ExpenseDeleteDTO(id=last_expense.id)
         await self._handle(Command.DELETE_EXPENSE, dto)
 
-        await after_delete_last_expense_keyboard(event, meta.amount, meta.category_name)
+        await after_delete_last_expense_keyboard(event, last_expense_amount, last_expense_category_name)
         # Удаляем ключи состояния после удаления последней траты
         await self.fsm.set_state(
             user.telegram_id,

@@ -7,11 +7,12 @@ from application.dto.stats_dto import StatsRequestDTO, StatsPeriodEnum, StatsPer
 from application.dto.user_dto import UserInDBDTO
 from config import logger
 from domain.uow.abstract import AbstractUnitOfWork
-from interfaces.telegram_bot.utils.state_manager import FSMManager
+from interfaces.telegram_bot.utils.state_manager import FSMManager, State
 from interfaces.telegram_bot.keyboards.build_stats_keyboard import after_click_stats_expense_keyboard, expense_history_keyboard_keyboard, after_expense_history_period_keyboard
 from interfaces.telegram_bot.keyboards.common_keyboard import show_error_keyboard, default_nav_buttons_keyboard
 from application.dto.expense_dto import ExpenseHistoryPeriodDTO, ExpenseHistoryDTO
 from interfaces.telegram_bot.handlers.orchestrators.base_orchestrator import OrchestratorBase
+from interfaces.telegram_bot.utils.state_manager import ExpenseMeta
 
 
 class StatsOrchestrator(OrchestratorBase):
@@ -23,7 +24,14 @@ class StatsOrchestrator(OrchestratorBase):
 
     async def show_keyboard_stats_expense(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Тут после нажатия Статистика."""
-        await after_click_stats_expense_keyboard(event)
+        message = await after_click_stats_expense_keyboard(event)
+        await self.fsm.set_state(
+            user.telegram_id,
+            State.SHOW_STATS_KEYBOARD,
+            meta=ExpenseMeta(
+                message_id=message.id,
+            )
+        )
 
 
     async def handle_stats_period(self, event: events.CallbackQuery.Event, user: UserInDBDTO, period: str):
@@ -69,7 +77,15 @@ class StatsOrchestrator(OrchestratorBase):
 
     async def show_keyboard_expense_history(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Тут после нажания на История трат."""
-        return await expense_history_keyboard_keyboard(event)
+        message = await expense_history_keyboard_keyboard(event)
+        await self.fsm.set_state(
+            user.telegram_id,
+            State.SHOW_STATS_KEYBOARD,
+            meta=ExpenseMeta(
+                message_id=message.id,
+            )
+        )
+
 
 
     async def handle_expense_history_period(self, event: events.CallbackQuery.Event, user: UserInDBDTO, period: str):

@@ -25,6 +25,10 @@ class ExpenseService:
         """Получение конкретного расхода по ID."""
         return await self.repo.get_by_id(expense_id)
 
+    async def get_last(self) -> ExpenseInDB | None:
+        """Получение последней записи."""
+        return await self.repo.get_last()
+
     async def update_expense(self, updated_expense: ExpenseInDB) -> ExpenseInDB:
         """Обновление данных расхода."""
         return await self.repo.update(updated_expense)

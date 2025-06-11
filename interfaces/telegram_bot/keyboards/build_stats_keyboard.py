@@ -13,7 +13,7 @@ async def after_click_stats_expense_keyboard(event: events.CallbackQuery.Event):
         [Button.inline("🗓️ Этот месяц", data=b"stats:month")],
         [Button.inline("↩️ Назад", b"back")]
     ]
-    await event.edit(text, buttons=buttons)
+    return await event.edit(text, buttons=buttons)
 
 
 # TODO: пересмотреть везде эти три кнопки, возможно добавлять их из default_nav_buttons
@@ -27,10 +27,9 @@ async def expense_history_keyboard_keyboard(event: events.CallbackQuery.Event):
         [Button.inline("🏠 На главную", b"home")]
     ]
     try:
-        await event.edit(text=text, buttons=buttons)
+        return await event.edit(text=text, buttons=buttons)
     except MessageNotModifiedError:
         pass
-    await event.answer()
 
 
 async def after_expense_history_period_keyboard(event: events.CallbackQuery.Event, text: list[str]):

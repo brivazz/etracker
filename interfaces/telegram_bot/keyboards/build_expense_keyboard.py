@@ -79,11 +79,11 @@ async def edit_last_expense_keyboard(event: events.CallbackQuery.Event) -> Messa
     return await event.edit(text, buttons=buttons)
 
 
-async def after_input_amount_for_edit_expense_keyboard(event: events.NewMessage.Event, new_amount: float, input_message_id):
+async def after_input_amount_for_edit_expense_keyboard(event: events.NewMessage.Event, new_amount: float, input_message_id, category_name: str):
     await event.client.edit_message(
             entity=event.chat_id,
             message=input_message_id,
-            text = f"✅ Последняя трата обновлена: {new_amount:.2f} руб.",
+            text = f"✅ Последняя трата обновлена: {new_amount:.2f} руб., в категории {category_name.upper()}",
             buttons=await default_nav_buttons_keyboard()
         )
 

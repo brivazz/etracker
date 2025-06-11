@@ -18,6 +18,9 @@ class AbstractExpenseRepository(ABC):
     async def get_by_id(self, expense_id: int) -> ExpenseInDB | None: ...
 
     @abstractmethod
+    async def get_last(self) -> ExpenseInDB | None: ...
+
+    @abstractmethod
     async def update(self, expense: ExpenseInDB) -> ExpenseInDB: ...
 
     @abstractmethod

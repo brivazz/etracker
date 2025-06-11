@@ -25,6 +25,14 @@ class ExpenseOrchestrator:
         expense_dto = await self.expense_indb_mapper.entity_to_dto(expense_entity)
         return expense_dto
 
+    async def get_last_expense(self) -> ExpenseInDBDTO | None:
+        expense_service = await get_expense_service(self.uow.expense_repo)
+        last_expense_entity = await expense_service.get_last()
+        if not last_expense_entity:
+            return None
+        last_expense_dto = await self.expense_indb_mapper.entity_to_dto(last_expense_entity)
+        return last_expense_dto
+
     async def delete_expense(self, expense: ExpenseDeleteDTO) -> bool:
         expense_service = await get_expense_service(self.uow.expense_repo)
         success = await expense_service.delete_expense(expense.id)

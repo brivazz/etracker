@@ -19,7 +19,7 @@ class ExpenseCreate:
 
 @dataclass
 class ExpenseInDB(MixinId, MixinDate, ExpenseCreate):
-    ...
+    category_name: str | None = field(default=None)
 
 @dataclass
 class ExpenseHistoryPeriod:

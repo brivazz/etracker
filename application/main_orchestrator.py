@@ -36,7 +36,11 @@ class MainOrchestrator:
 
             orchestrator = ExpenseOrchestrator(self.uow)
             return await orchestrator.delete_expense(dto)
-        
+
+        elif command == Command.GET_LAST_EXPENSE:
+            orchestrator = ExpenseOrchestrator(self.uow)
+            return await orchestrator.get_last_expense()
+
         elif command == Command.GET_EXPENSE_HISTORY:
             if not isinstance(dto, ExpenseHistoryPeriodDTO):
                 raise ValueError("Invalid DTO for get_expense_history")

@@ -9,3 +9,4 @@ class Command(Enum):
     GET_USER_CATEGORIES = "get_user_categories"
     ADD_CATEGORY = "add_category"
     GET_STATS_EXPENSE = "get_stats_expense"
+    GET_LAST_EXPENSE = "get_last_expense"

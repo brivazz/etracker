@@ -68,6 +68,8 @@ class State(Enum):
     WAITING_FOR_CATEGORY_EDIT = "WAITING_FOR_CATEGORY_EDIT"
     WAITING_FOR_AMOUNT_EDIT = "WAITING_FOR_AMOUNT_EDIT"
 
+    # Статистика
+    SHOW_STATS_KEYBOARD = "SHOW_STATS_KEYBOARD"
 
 class AsyncDictStorage:
     def __init__(self):
