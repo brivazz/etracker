@@ -30,8 +30,9 @@ async def run_bot():
     await client.start(bot_token=settings.tg_bot_token)  # type: ignore
     logger.info("✅ Бот запущен!")
 
-    # Запускаем heartbeat
+    # Запускаем heartbeat и keepalive_task
     heartbeat_task = asyncio.create_task(heartbeat(stop_event))
+    keepalive_task = asyncio.create_task(keep_alive(client, stop_event))
 
     try:
         await client.run_until_disconnected()  # type: ignore
@@ -44,8 +45,10 @@ async def run_bot():
     finally:
         await shutdown(stop_event)
         heartbeat_task.cancel()
+        keepalive_task.cancel()
         try:
             await heartbeat_task
+            await keepalive_task
         except asyncio.CancelledError:
             logger.debug("✅ Heartbeat завершён")
 
@@ -54,6 +57,16 @@ async def heartbeat(stop_event: asyncio.Event):
     while not stop_event.is_set():
         logger.debug("💓 Heartbeat: бот активен")
         await asyncio.sleep(60)
+
+
+async def keep_alive(client: TelegramClient, stop_event: asyncio.Event):
+    while not stop_event.is_set():
+        try:
+            await client.get_me()
+            logger.debug("keep_alive: get_me() вызван, соединение активно")
+        except Exception as e:
+            logger.warning(f"Ошибка при keep_alive get_me(): {e}")
+        await asyncio.sleep(30)
 
 
 async def shutdown(stop_event: asyncio.Event):
