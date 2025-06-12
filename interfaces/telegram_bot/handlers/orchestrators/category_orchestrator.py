@@ -1,5 +1,9 @@
 from domain.uow.abstract import AbstractUnitOfWork
-from interfaces.telegram_bot.utils.state_manager import FSMManager, State
+from interfaces.telegram_bot.utils.state_manager import (
+    FSMManager,
+    State,
+    get_message_id,
+)
 from telethon import events
 from typing import cast
 from application.dto.user_dto import UserInDBDTO
@@ -31,9 +35,8 @@ class CategoryOrchestrator(OrchestratorBase):
         self, event: events.CallbackQuery.Event, user: UserInDBDTO
     ):
         """Тут показывам клавиатуру при добавлении новой категории."""
-        message_id = await self.fsm.get_meta(user.telegram_id, "message_id")
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         await add_category_keyboard(event, message_id)
-        await self.fsm.set_state(user.telegram_id, State.WAITING_FOR_CATEGORY)
         await self.fsm.set_state(
             user.telegram_id,
             State.WAITING_FOR_CATEGORY,
@@ -53,7 +56,7 @@ class CategoryOrchestrator(OrchestratorBase):
 
         # Удаляем сообщение пользователя с категорией
         await event.message.delete()
-        message_id = await self.fsm.get_meta(user.telegram_id, "message_id")
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         await after_add_new_category_keyboard(event, category_name, message_id)
         await self.fsm.set_state(
             user.telegram_id,

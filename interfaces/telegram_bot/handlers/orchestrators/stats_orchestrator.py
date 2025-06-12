@@ -1,6 +1,14 @@
 from io import BytesIO
 from typing import cast
 from telethon import events
+from telethon.tl.functions.messages import EditMessageRequest
+from telethon.tl.types import (
+    InputMediaUploadedPhoto,
+    ReplyInlineMarkup,
+    KeyboardButtonCallback,
+    KeyboardButtonRow,
+)
+
 from interfaces.telegram_bot.utils.plot import (
     generate_pie_chart,
     generate_bar_chart_bytes,
@@ -10,7 +18,11 @@ from application.dto.stats_dto import StatsRequestDTO, StatsPeriodEnum, StatsPer
 from application.dto.user_dto import UserInDBDTO
 from config import logger
 from domain.uow.abstract import AbstractUnitOfWork
-from interfaces.telegram_bot.utils.state_manager import FSMManager, State
+from interfaces.telegram_bot.utils.state_manager import (
+    FSMManager,
+    State,
+    get_message_id,
+)
 from interfaces.telegram_bot.keyboards.build_stats_keyboard import (
     after_click_stats_expense_keyboard,
     expense_history_keyboard_keyboard,
@@ -60,33 +72,50 @@ class StatsOrchestrator(OrchestratorBase):
         period_label: str = dto.period.label()  # Enum.label()
         total = sum(s.total_amount for s in stats.stats)
 
-        # chart_path = generate_bar_chart(
-        #     data={s.category_name: s.total_amount for s in stats.stats},
-        #     period_label=period_label,
-        #     from_date=stats.from_date,
-        #     to_date=stats.to_date
-        # )
-        # logger.info(f"Chart saved to: {chart_path}")
-
         chart_buf: BytesIO = generate_bar_chart_bytes(
             data={s.category_name: s.total_amount for s in stats.stats},
             period_label=period_label,
             from_date=stats.from_date,
             to_date=stats.to_date,
         )
-        await event.client.send_file(
-            event.chat_id,
-            # chart_path,
-            file=chart_buf,
-            caption=(
-                f"📊 Расходы за {period_label} "
-                f"({stats.from_date.strftime('%d.%m')} – {stats.to_date.strftime('%d.%m')})\n"
-                f"💸 Всего: {total:.2f}₽"
-            ),
-            buttons=await default_nav_buttons_keyboard(),
+        markup = ReplyInlineMarkup(
+            rows=[
+                KeyboardButtonRow(
+                    buttons=[
+                        KeyboardButtonCallback(text="◀️ Назад", data=b"back"),
+                    ]
+                ),
+                KeyboardButtonRow(
+                    buttons=[
+                        KeyboardButtonCallback(text="🏠 На главную", data=b"home"),
+                    ]
+                ),
+            ]
         )
-        await event.edit()
+        message_id = await get_message_id(self.fsm, user.telegram_id)
+        uploaded = await event.client.upload_file(chart_buf)
+
+        await event.client(
+            EditMessageRequest(
+                peer=event.chat_id,
+                id=message_id,
+                media=InputMediaUploadedPhoto(file=uploaded),
+                message=(
+                    f"📊 Расходы за {period_label} "
+                    f"({stats.from_date.strftime('%d.%m')} – {stats.to_date.strftime('%d.%m')})\n"
+                    f"💸 Всего: {total:.2f}₽"
+                ),
+                reply_markup=markup,
+            )
+        )
         chart_buf.close()
+        await self.fsm.set_state(
+            user.telegram_id,
+            State.SHOW_STATS_KEYBOARD,
+            meta=ExpenseMeta(
+                message_id=message_id,
+            ),
+        )
 
     async def show_keyboard_expense_history(
         self, event: events.CallbackQuery.Event, user: UserInDBDTO

@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     tg_bot_token: str = Field(
         default="23423425234:aajdslfijsfij", description="Telegram BOT TOKEN"
     )
+    tg_admin_id: int = Field(default=12345678, description="Telegram ADMIN ID")
 
     db_url: str = Field(default="sqlite:///expenses.db")
     db_echo: bool = False

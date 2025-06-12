@@ -270,3 +270,7 @@ class FSMManager:
 
 
 fsm = FSMManager(storage=AsyncDictStorage())
+
+
+async def get_message_id(fsm: FSMManager, telegram_id: int) -> int:
+    return await fsm.get_meta(telegram_id, "message_id")

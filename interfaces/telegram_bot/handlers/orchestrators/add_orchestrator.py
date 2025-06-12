@@ -1,7 +1,9 @@
-from telethon.errors import MessageNotModifiedError, MessageIdInvalidError
-from telethon.tl.custom import Message
 from domain.uow.abstract import AbstractUnitOfWork
-from interfaces.telegram_bot.utils.state_manager import FSMManager, State
+from interfaces.telegram_bot.utils.state_manager import (
+    FSMManager,
+    State,
+    get_message_id,
+)
 from interfaces.telegram_bot.keyboards.build_expense_keyboard import (
     before_input_amount_keyboard,
     before_save_amount_keyboard,
@@ -58,30 +60,21 @@ class AddOrchestrator(OrchestratorBase):
     async def add_expense(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Тут после нажатия Добавить трату."""
         new_buttons, new_text = await expense_keyboard(user.id)
-        # сообщение нашей клавиатуры записанное на предыдущем шаге
-        message_id = await self.fsm.get_meta(user.telegram_id, "message_id")
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         # TODO: Тут нужно предусмотреть, если пользователь введут свое сообщение,
         # то нужно проверить тип сообщения, удалить его сообщение
         # и изменять как сейчас же редактируем наше сообщение!
-        try:
-            await event.client.edit_message(
-                entity=event.chat_id,
-                message=message_id,
-                text=new_text,
-                buttons=new_buttons,
-            )
-        except (MessageIdInvalidError, MessageNotModifiedError):
-            pass
+        await event.client.edit_message(
+            entity=event.chat_id,
+            message=message_id,
+            text=new_text,
+            buttons=new_buttons,
+        )
         logger.warning("❗️❗️❗️ В кнопке Добавить трату")
         await self.fsm.set_state(
             user.telegram_id,
             State.ADD_EXPENSE,
-            meta=ExpenseMeta(
-                message_id=message_id,
-            ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def handle_category_selection(
         self,
@@ -93,8 +86,9 @@ class AddOrchestrator(OrchestratorBase):
         """Тут после нажатия на категорию/при выборе категории."""
         # Когда выбрали категорию.
         new_text, new_buttons = await before_input_amount_keyboard(category_name)
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         # Тоже сообщение нашей клавиатуры
-        message = await event.edit(new_text, buttons=new_buttons)
+        await event.edit(new_text, buttons=new_buttons)
         await event.answer()
 
         logger.warning("❗️❗️❗️В кнопке какой-то выбранной категории")
@@ -104,18 +98,18 @@ class AddOrchestrator(OrchestratorBase):
             meta=ExpenseMeta(
                 category_id=category_id,
                 category_name=category_name,
-                message_id=message.id,
+                message_id=message_id,
             ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def handle_amount_expense(
         self, event: events.NewMessage.Event, user: UserInDBDTO
     ):
         """Тут после ввода цифр суммы для траты"""
         category_id, category_name = await self._get_category_fsm(user.telegram_id)
-        message_id = await self.fsm.get_meta(user.telegram_id, "message_id")
+        message_id = await get_message_id(self.fsm, user.telegram_id)
+        if not message_id:
+            message_id = event.message.id
         # Тоже сообщение нашей клавиатуры
         amount = await self._parse_amount(event, message_id)
         if amount is None:
@@ -127,27 +121,27 @@ class AddOrchestrator(OrchestratorBase):
         # и удаляем сумму, написанную пользователем
         await event.message.delete()
         """Перед сохранением/записью новой траты."""
-        await before_save_amount_keyboard(event, amount, category_name, message_id)
+        text, buttons, message = await before_save_amount_keyboard(
+            event, amount, category_name, message_id
+        )
 
         logger.warning("❗️❗️❗️В кнопке после ввода цифр суммы для траты")
         await self.fsm.set_state(
             user.telegram_id,
             State.BEFORE_SAVE_EXPENSE,
             meta=ExpenseMeta(
-                # expense_id=expense.id,
                 amount=amount,
                 category_id=category_id,
                 category_name=category_name,
                 message_id=message_id,
             ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def save_new_expense(
         self, event: events.CallbackQuery.Event, user: UserInDBDTO
     ):
-        message_id = await self.fsm.get_meta(user.telegram_id, "message_id")
+        message_id = await get_message_id(self.fsm, user.telegram_id)
+
         category_id, category_name = await self._get_category_fsm(user.telegram_id)
         amount = await self.fsm.get_meta(user.telegram_id, "amount")
 
@@ -170,34 +164,28 @@ class AddOrchestrator(OrchestratorBase):
                 message_id=message_id,
             ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def change_entry(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """Изменить введенные пользователем Сумму и Категорию на выбор."""
         # Обработка кнопки CHANGE_ENTRY
-        meta = ExpenseMeta(**await self.fsm.get_meta(user.telegram_id))
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         new_buttons, new_text = await expense_keyboard(user.id)
         await event.client.edit_message(
             entity=event.chat_id,
-            message=meta.message_id,
+            message=message_id,
             text=new_text,
             buttons=new_buttons,
         )
         await self.fsm.set_state(
             user.telegram_id,
             State.CHANGE_ENTRY,
-            meta=ExpenseMeta(
-                message_id=meta.message_id,
-            ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def edit_last_expense(
         self, event: events.CallbackQuery.Event, user: UserInDBDTO
     ):
         """Тут после нажатия на редактирование последней траты."""
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         dto = ExpenseCreateDTO(user_id=user.id, amount=0.0, category_id=0, note="")
         last_expense = cast(
             ExpenseInDBDTO, await self._handle(Command.GET_LAST_EXPENSE, dto)
@@ -207,7 +195,7 @@ class AddOrchestrator(OrchestratorBase):
                 event, text="❗ Нет последней траты для редактирования."
             )
             return
-        message = await edit_last_expense_keyboard(event)
+        await edit_last_expense_keyboard(event)
         await self.fsm.set_state(
             user.telegram_id,
             State.EDIT_LAST_EXPENSE,
@@ -216,11 +204,9 @@ class AddOrchestrator(OrchestratorBase):
                 amount=last_expense.amount,
                 category_id=last_expense.category_id,
                 category_name=last_expense.category_name,
-                message_id=message.id,
+                message_id=message_id,
             ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def handle_edit_expense(
         self, event: events.NewMessage.Event, user: UserInDBDTO
@@ -250,15 +236,12 @@ class AddOrchestrator(OrchestratorBase):
                 message_id=meta.message_id,
             ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def handle_repeat_last_expense(
         self, event: events.CallbackQuery.Event, user: UserInDBDTO
     ):
         """Тут после нажатия Повторить последнюю."""
         # Получаем последнюю
-        meta = ExpenseMeta(**await self.fsm.get_meta(user.telegram_id))
         dto = ExpenseCreateDTO(user_id=user.id, amount=0.0, category_id=0, note="")
         last_expense = cast(
             ExpenseInDBDTO, await self._handle(Command.GET_LAST_EXPENSE, dto)
@@ -288,17 +271,13 @@ class AddOrchestrator(OrchestratorBase):
                 amount=expense.amount,
                 category_id=expense.category_id,
                 category_name=expense.category_name,
-                message_id=meta.message_id,
             ),
         )
-        current_state = await self.fsm.get_state(user.telegram_id)
-        logger.info(f"в состоянии: == {current_state}")
 
     async def handle_delete_last_expense(
         self, event: events.CallbackQuery.Event, user: UserInDBDTO
     ):
         """Тут после нажатия Удалить последнюю."""
-        meta = ExpenseMeta(**await self.fsm.get_meta(user.telegram_id))
         dto = ExpenseCreateDTO(user_id=user.id, amount=0.0, category_id=0, note="")
         last_expense = cast(
             ExpenseInDBDTO, await self._handle(Command.GET_LAST_EXPENSE, dto)
@@ -320,9 +299,7 @@ class AddOrchestrator(OrchestratorBase):
         await self.fsm.set_state(
             user.telegram_id,
             State.DELETE_EXPENSE,
-            meta=ExpenseMeta(
-                message_id=meta.message_id,
-            ),
+            meta=ExpenseMeta(),
         )
         current_state = await self.fsm.get_state(user.telegram_id)
         logger.info(f"в состоянии: == {current_state}")

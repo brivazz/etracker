@@ -2,7 +2,12 @@ from telethon import events, errors
 from application.dto.user_dto import UserInDBDTO
 from config import logger
 from domain.uow.abstract import AbstractUnitOfWork
-from interfaces.telegram_bot.utils.state_manager import FSMManager, State, ExpenseMeta
+from interfaces.telegram_bot.utils.state_manager import (
+    FSMManager,
+    State,
+    ExpenseMeta,
+    get_message_id,
+)
 from interfaces.telegram_bot.handlers.orchestrators.base_orchestrator import (
     OrchestratorBase,
 )
@@ -50,6 +55,7 @@ class CommonOrchestrator(OrchestratorBase):
                 message_id=message.id,  # Это сообщение наша клавиатура
             ),
         )
+        logger.info(f"КЛАВИАТУРА НАЧАЛА id {message.id}")
 
     async def handle_home(self, event: events.CallbackQuery.Event, user: UserInDBDTO):
         """После нажатия кнопки Домой."""
@@ -87,9 +93,8 @@ class CommonOrchestrator(OrchestratorBase):
     async def back_to_category(
         self, event: events.CallbackQuery.Event, user: UserInDBDTO
     ):
-        await self.fsm.set_state(user.telegram_id, State.ADD_EXPENSE)
+        message_id = await get_message_id(self.fsm, user.telegram_id)
         buttons, text = await expense_keyboard(user.id)
-        message_id = await self.fsm.get_meta(user.telegram_id, "message_id")
         try:
             await event.client.edit_message(
                 entity=event.chat_id, message=message_id, text=text, buttons=buttons
@@ -106,6 +111,8 @@ class CommonOrchestrator(OrchestratorBase):
         handler = self.back_handlers.get(item.state)
         if not handler:
             await event.answer("Не могу вернуться назад.")
+            # TODO: Пока что костыль, но я разберусь!
+            await self.back_to_main_menu(event, user)
             return
 
         await handler(event, user)

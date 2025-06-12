@@ -71,10 +71,10 @@ async def before_save_amount_keyboard(
         [Button.inline("✅ Сохранить", b"save_expense")],
         [Button.inline("🏠 На главную", b"home"), Button.inline("↩️ Назад", b"back")],
     ]  # + await default_nav_buttons_keyboard()
-    await event.client.edit_message(
+    message = await event.client.edit_message(
         entity=event.chat_id, message=input_message_id, text=text, buttons=buttons
     )
-    return text, buttons
+    return text, buttons, message
 
 
 async def after_save_expense_keyboard(
