@@ -121,7 +121,7 @@ class AddOrchestrator(OrchestratorBase):
         # и удаляем сумму, написанную пользователем
         await event.message.delete()
         """Перед сохранением/записью новой траты."""
-        text, buttons, message = await before_save_amount_keyboard(
+        text, buttons = await before_save_amount_keyboard(
             event, amount, category_name, message_id
         )
 

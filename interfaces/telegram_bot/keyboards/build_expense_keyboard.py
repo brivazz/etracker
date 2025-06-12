@@ -1,5 +1,7 @@
 from typing import cast
 from telethon import Button, events
+from telethon.errors import MessageNotModifiedError
+
 from application.factories.uow_factories import get_uow
 from application.main_orchestrator import MainOrchestrator
 from application.dto.category_dto import CategoryInDBDTO
@@ -71,10 +73,13 @@ async def before_save_amount_keyboard(
         [Button.inline("✅ Сохранить", b"save_expense")],
         [Button.inline("🏠 На главную", b"home"), Button.inline("↩️ Назад", b"back")],
     ]  # + await default_nav_buttons_keyboard()
-    message = await event.client.edit_message(
-        entity=event.chat_id, message=input_message_id, text=text, buttons=buttons
-    )
-    return text, buttons, message
+    try:
+        await event.client.edit_message(
+            entity=event.chat_id, message=input_message_id, text=text, buttons=buttons
+        )
+    except MessageNotModifiedError:
+        pass
+    return text, buttons
 
 
 async def after_save_expense_keyboard(
