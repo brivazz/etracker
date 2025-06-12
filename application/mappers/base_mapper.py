@@ -26,7 +26,8 @@ class BaseMapper(Generic[TDto, TEntity, TOrm], ABC):
         if self.orm_cls is None:
             raise NotImplementedError("ORM not defined in this mapper")
         orm_dict = {
-            k: v for k, v in vars(orm).items()
+            k: v
+            for k, v in vars(orm).items()
             if not k.startswith("_") and not callable(v)
         }
         return self.entity_cls(**orm_dict)

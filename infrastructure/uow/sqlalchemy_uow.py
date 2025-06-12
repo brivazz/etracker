@@ -1,15 +1,20 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from domain.uow.abstract import AbstractUnitOfWork
-from infrastructure.db.sqlalchemy.sqlalchemy_async_session import database
-from infrastructure.db.sqlalchemy.repositories.user_repo_impl import SQLAlchemyUserRepository
-from infrastructure.db.sqlalchemy.repositories.message_repo_impl import SQLAlchemyMessageRepository
-from infrastructure.db.sqlalchemy.repositories.expense_repo_impl import SQLAlchemyExpenseRepository
-from infrastructure.db.sqlalchemy.repositories.category_repo_impl import SQLAlchemyCategoryRepository
+from infrastructure.db.sqlalchemy.repositories.user_repo_impl import (
+    SQLAlchemyUserRepository,
+)
+from infrastructure.db.sqlalchemy.repositories.message_repo_impl import (
+    SQLAlchemyMessageRepository,
+)
+from infrastructure.db.sqlalchemy.repositories.expense_repo_impl import (
+    SQLAlchemyExpenseRepository,
+)
+from infrastructure.db.sqlalchemy.repositories.category_repo_impl import (
+    SQLAlchemyCategoryRepository,
+)
 from config import logger
 
-# application.service — вызывает UnitOfWork через async with
-# внутри него доступны: uow.user_repo, uow.message_repo
-# каждый из них — имплементация, инкапсулирующая работу с БД (SQLAlchemy)
+
 class RepositoryFactory:
     def __init__(self, session):
         self.session = session
@@ -19,7 +24,7 @@ class RepositoryFactory:
 
     async def create_message_repo(self):
         return SQLAlchemyMessageRepository(self.session)
-    
+
     async def create_expense_repo(self):
         return SQLAlchemyExpenseRepository(self.session)
 
@@ -52,7 +57,7 @@ class SQLAlchemyUnitOfWork(AbstractUnitOfWork):
         else:
             logger.debug("Committing UoW")
             await self.commit()
-        
+
         await self.session.close()
         logger.debug("Session closed")
 

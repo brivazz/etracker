@@ -3,6 +3,7 @@ from domain.repositories.message_repo import AbstractMessageRepository
 from infrastructure.db.sqlalchemy.models import MessageORM
 from sqlalchemy.orm import Session
 
+
 class SQLAlchemyMessageRepository(AbstractMessageRepository):
     def __init__(self, session: Session):
         self.session = session
@@ -16,4 +17,3 @@ class SQLAlchemyMessageRepository(AbstractMessageRepository):
     def save(self, message: MessageCreate):
         orm = MessageORM(user_id=message.user_id, text=message.text)
         self.session.add(orm)
-        # self.session.commit()

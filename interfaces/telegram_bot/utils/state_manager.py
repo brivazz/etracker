@@ -25,22 +25,23 @@ class Data(Enum):
     ADD_CATEGORY = "add_category"
     # Статистика
     STATS_EXPENSE = "stats_expense"
-    STATS_SELECTION = b'stats:(day|week|month)'
+    STATS_SELECTION = b"stats:(day|week|month)"
     # Общие
     START = "/start"
     HOME = "home"
     CANCEL = "cancel"
     BACK = "back"
-    
+
+
 def parse_callback_data(raw_data: bytes) -> tuple[Data | None, tuple]:
-    s = raw_data.decode('utf-8')
+    s = raw_data.decode("utf-8")
     for data_enum in Data:
         val = data_enum.value
         if isinstance(val, str):
             if s == val:
                 return data_enum, ()
         elif isinstance(val, bytes):
-            pattern = val.decode('utf-8')
+            pattern = val.decode("utf-8")
             m = re.match(pattern, s)
             if m:
                 return data_enum, m.groups()
@@ -59,7 +60,7 @@ class State(Enum):
     EXPENSE_RECORDED = "EXPENSE_RECORDED"  # Успешно добавлено
     REPEAT_EXPENSE = "REPEAT_EXPENSE"
     DELETE_EXPENSE = "DELETE_EXPENSE"
-    
+
     WAITING_FOR_CATEGORY = "WAITING_FOR_CATEGORY"  # Ждём выбор категории
     WAITING_FOR_AMOUNT = "WAITING_FOR_AMOUNT"  # Ждём ввод суммы
 
@@ -70,6 +71,7 @@ class State(Enum):
 
     # Статистика
     SHOW_STATS_KEYBOARD = "SHOW_STATS_KEYBOARD"
+
 
 class AsyncDictStorage:
     def __init__(self):
@@ -86,6 +88,7 @@ class AsyncDictStorage:
     async def dump(self, telegram_id: int) -> dict:
         return self._storage.get(telegram_id, {})
 
+
 @dataclass
 class ExpenseMeta:
     expense_id: int | None = None
@@ -94,11 +97,13 @@ class ExpenseMeta:
     category_name: str | None = None
     message_id: int | None = None
 
+
 @dataclass
 class FSMHistoryItem:
     state: State
     meta: Optional[ExpenseMeta] = None
-    context: dict[str, Any] = field(default_factory=dict)   # user и др. данные сессии
+    context: dict[str, Any] = field(default_factory=dict)  # user и др. данные сессии
+
 
 def custom_json_decoder(obj):
     # Попробуем автоматически распарсить ISO-строки как datetime
@@ -109,6 +114,7 @@ def custom_json_decoder(obj):
             except ValueError:
                 pass
     return obj
+
 
 def custom_json_encoder(obj):
     if isinstance(obj, Enum):
@@ -121,8 +127,10 @@ def custom_json_encoder(obj):
         return obj.isoformat()  # сериализация в ISO-8601
     raise TypeError(f"Object of type {obj.__class__.__name__} is not JSON serializable")
 
+
 def serialize_history(history: list[FSMHistoryItem]) -> str:
     return json.dumps([asdict(item) for item in history], default=custom_json_encoder)
+
 
 def deserialize_history(data: str) -> list[FSMHistoryItem]:
     raw_list = json.loads(data)
@@ -131,12 +139,14 @@ def deserialize_history(data: str) -> list[FSMHistoryItem]:
             state=State(item["state"]),
             meta=item.get("meta", {}),
             context=item.get("context", {}),
-        ) for item in raw_list
+        )
+        for item in raw_list
     ]
+
 
 class FSMManager:
     def __init__(self, storage, history_limit: int = 10):
-        self.storage = storage # Тут dict или Redis-like
+        self.storage = storage  # Тут dict или Redis-like
         self.history_limit = history_limit
 
     async def get_state(self, telegram_id: int) -> Optional[State]:
@@ -148,12 +158,12 @@ class FSMManager:
         return deserialize_history(raw) if raw else []
 
     async def set_state(
-            self,
-            telegram_id: int,
-            state: State,
-            *,
-            meta: Optional[ExpenseMeta] = None,
-            context_update: Optional[dict] = None,
+        self,
+        telegram_id: int,
+        state: State,
+        *,
+        meta: Optional[ExpenseMeta] = None,
+        context_update: Optional[dict] = None,
     ):
         current_state = await self.get_state(telegram_id)
         if current_state:
@@ -162,36 +172,50 @@ class FSMManager:
             current_meta_raw = await self.storage.get(telegram_id, "meta")
 
             try:
-                current_context = json.loads(current_context_raw) if current_context_raw else {}
+                current_context = (
+                    json.loads(current_context_raw) if current_context_raw else {}
+                )
                 current_meta = json.loads(current_meta_raw) if current_meta_raw else {}
             except Exception:
                 current_context = {}
                 current_meta = {}
 
-            history.append(FSMHistoryItem(
-                state=current_state,
-                context=current_context,
-                meta=current_meta,
-            ))
-            history = history[-self.history_limit:]
-            await self.storage.set(telegram_id, "state_stack", serialize_history(history))
+            history.append(
+                FSMHistoryItem(
+                    state=current_state,
+                    context=current_context,
+                    meta=current_meta,
+                )
+            )
+            history = history[-self.history_limit :]
+            await self.storage.set(
+                telegram_id, "state_stack", serialize_history(history)
+            )
 
         await self.storage.set(telegram_id, "state", state.value)
 
         # Обновляем context, объединяя с уже существующим
         current_context_raw = await self.storage.get(telegram_id, "context")
         try:
-            current_context = json.loads(current_context_raw) if current_context_raw else {}
+            current_context = (
+                json.loads(current_context_raw) if current_context_raw else {}
+            )
         except Exception:
             current_context = {}
 
         if context_update:
             current_context.update(context_update)
-            await self.storage.set(telegram_id, "context", json.dumps(current_context, default=custom_json_encoder))
+            await self.storage.set(
+                telegram_id,
+                "context",
+                json.dumps(current_context, default=custom_json_encoder),
+            )
 
         # Сохраняем короткоживущие мета-данные отдельно
         if meta:
-            await self.storage.set(telegram_id, "meta", json.dumps(meta, default=custom_json_encoder))
+            await self.storage.set(
+                telegram_id, "meta", json.dumps(meta, default=custom_json_encoder)
+            )
 
     async def go_back(self, telegram_id: int) -> FSMHistoryItem:
         history = await self.get_history(telegram_id)

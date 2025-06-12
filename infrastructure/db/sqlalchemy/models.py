@@ -14,9 +14,9 @@ class IdTimestampsMixin:
     id: Mapped[int] = mapped_column(primary_key=True)
     created_at: Mapped[datetime] = mapped_column(server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
-        server_default=func.now(),
-        onupdate=func.now()
+        server_default=func.now(), onupdate=func.now()
     )
+
 
 class UserORM(IdTimestampsMixin, Base):
     __tablename__ = "users"
@@ -37,8 +37,9 @@ class UserORM(IdTimestampsMixin, Base):
     # Связь: один пользователь <-> одна настройка
     settings: Mapped["UserSettingsORM"] = relationship(back_populates="user")
 
+
 class ExpenseORM(IdTimestampsMixin, Base):
-    __tablename__ = 'expenses'
+    __tablename__ = "expenses"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     category_id: Mapped[int] = mapped_column(ForeignKey("categories.id"))
@@ -52,11 +53,14 @@ class ExpenseORM(IdTimestampsMixin, Base):
     # Обратная связь: расход принадлежит пользователю
     user: Mapped["UserORM"] = relationship(back_populates="expenses")
 
+
 class CategoryORM(IdTimestampsMixin, Base):
     __tablename__ = "categories"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
-    name: Mapped[str] = mapped_column(String(64), nullable=False, unique=True, index=True)
+    name: Mapped[str] = mapped_column(
+        String(64), nullable=False, unique=True, index=True
+    )
 
     # Связь: категория принадлежит одному пользователю
     user: Mapped["UserORM"] = relationship(back_populates="categories")
@@ -74,47 +78,12 @@ class MessageORM(IdTimestampsMixin, Base):
     # Обратная связь: сообщение принадлежит пользователю
     user: Mapped["UserORM"] = relationship(back_populates="messages")
 
+
 class UserSettingsORM(IdTimestampsMixin, Base):
-    __tablename__ = 'user_settings'
+    __tablename__ = "user_settings"
 
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     default_category: Mapped[str] = mapped_column(String)
 
     # Обратная связь: настройки принадлежат пользователю
     user: Mapped["UserORM"] = relationship(back_populates="settings")
-
-
-# #  Пример использования joinedload()
-# from sqlalchemy.orm import joinedload
-# from sqlalchemy import select
-
-# stmt = select(UserORM).options(joinedload(UserORM.messages))
-# result = async_session.execute(stmt)
-# users = result.scalars().all()
-
-# for user in users:
-#     print(user.username)
-#     for message in user.messages:
-#         print("  -", message.text)
-
-
-# # Пример использования selectinload()
-# from sqlalchemy.orm import selectinload
-
-# stmt = select(UserORM).options(selectinload(UserORM.messages))
-# result = async_session.execute(stmt)
-# users = result.scalars().all()
-
-# for user in users:
-#     print(user.username)
-#     for message in user.messages:
-#         print("  -", message.text)
-
-
-# # Можно загрузить связи второго уровня:
-# from sqlalchemy.orm import joinedload
-# from sqlalchemy import select
-
-# stmt = select(UserORM).options(
-#     joinedload(UserORM.messages).joinedload(MessageORM.comments)
-# )

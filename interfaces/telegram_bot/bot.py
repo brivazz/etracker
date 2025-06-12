@@ -8,6 +8,7 @@ from interfaces.telegram_bot.utils.inject_user_context import inject_user
 
 client: TelegramClient | None = None
 
+
 async def run_bot():
     global client
     stop_event = asyncio.Event()
@@ -17,7 +18,7 @@ async def run_bot():
         api_id=settings.tg_api_id,
         api_hash=settings.tg_api_hash,
         connection_retries=9999,
-        retry_delay=5
+        retry_delay=5,
     )
 
     # Применяем middleware ДО импорта хендлеров

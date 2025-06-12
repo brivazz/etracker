@@ -1,6 +1,7 @@
 from domain.repositories.category_repo import AbstractCategoryRepository
 from domain.entities.category import CategoryCreate, CategoryInDb
 
+
 class CategoryService:
     def __init__(self, repo: AbstractCategoryRepository):
         self.repo = repo

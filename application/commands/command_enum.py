@@ -1,5 +1,6 @@
 from enum import Enum
 
+
 class Command(Enum):
     REGISTER_OR_GET_USER = "register_or_get_user"
     ADD_EXPENSE = "add_expense"

@@ -1,6 +1,7 @@
 from datetime import datetime
 from pydantic import BaseModel, Field
 
+
 class ExpenseCreateDTO(BaseModel):
     id: int | None = None
     user_id: int
@@ -8,17 +9,20 @@ class ExpenseCreateDTO(BaseModel):
     category_id: int
     note: str
 
+
 class ExpenseInDBDTO(ExpenseCreateDTO):
     id: int | None = Field(default=None)
     category_name: str | None = Field(default=None)
     created_at: datetime
     updated_at: datetime
 
+
 class ExpenseEditDTO(BaseModel):
     id: int
     amount: float
     category_id: int
     note: str
+
 
 class ExpenseDeleteDTO(BaseModel):
     id: int
@@ -27,6 +31,7 @@ class ExpenseDeleteDTO(BaseModel):
 class ExpenseHistoryPeriodDTO(BaseModel):
     user_id: int
     period: str
+
 
 class ExpenseHistoryDTO(ExpenseHistoryPeriodDTO):
     date: datetime

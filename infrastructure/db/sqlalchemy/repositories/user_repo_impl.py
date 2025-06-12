@@ -1,5 +1,3 @@
-# infrastructure/db/sqlalchemy/repositories/user_repo_impl.py
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from sqlalchemy.orm import joinedload
@@ -9,6 +7,7 @@ from domain.repositories.user_repo import AbstractUserRepository
 from infrastructure.db.sqlalchemy.models import UserORM
 from application.mappers.user_mapper import UserMapper, UserInDBMapper
 
+
 class SQLAlchemyUserRepository(AbstractUserRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -17,11 +16,9 @@ class SQLAlchemyUserRepository(AbstractUserRepository):
 
     async def add(self, user: UserCreate) -> UserInDB:
         user_orm = await self.user_create_mapper.entity_to_orm(user)
-        print('orm_user:', user_orm)
-        print('self.session:', self.session)
-        self.session.add(user_orm) # Обязательно добавить в сессию
-        await self.session.flush()  # Нужно "протолкнуть" изменения в БД, чтобы ID и состояние стало persistent
-        await self.session.refresh(user_orm)  # Теперь можно делать refresh
+        self.session.add(user_orm)
+        await self.session.flush()
+        await self.session.refresh(user_orm)
         user_entity = await self.user_indb_mapper.orm_to_entity(user_orm)
         return user_entity
 
@@ -62,5 +59,7 @@ class SQLAlchemyUserRepository(AbstractUserRepository):
         result = await self.session.execute(stmt)
         user = result.scalar_one_or_none()
         if not user:
-                return []
-        return [await self.category_indb_mapper.orm_to_entity(e) for e in user.categories]
+            return []
+        return [
+            await self.category_indb_mapper.orm_to_entity(e) for e in user.categories
+        ]

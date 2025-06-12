@@ -7,12 +7,19 @@ from config import logger
 def inject_user(use_fsm: bool = True):
     def decorator(handler: Callable[..., Coroutine[Any, Any, None]]):
         @wraps(handler)
-        async def wrapper(event: NewMessage.Event | CallbackQuery.Event, *args, **kwargs):
-            from interfaces.telegram_bot.utils.state_manager import fsm, State, ExpenseMeta
+        async def wrapper(
+            event: NewMessage.Event | CallbackQuery.Event, *args, **kwargs
+        ):
+            from interfaces.telegram_bot.utils.state_manager import (
+                fsm,
+                State,
+                ExpenseMeta,
+            )
             from application.main_orchestrator import MainOrchestrator
             from application.dto.user_dto import UserCreateDTO, UserInDBDTO
             from application.factories.uow_factories import get_uow
             from application.commands.command_enum import Command
+
             sender = await event.get_sender()
             telegram_id = event.sender_id
             username = sender.username or sender.first_name
@@ -26,15 +33,19 @@ def inject_user(use_fsm: bool = True):
                 async with get_uow() as uow:
                     orchestrator = MainOrchestrator(uow=uow)
                     user_dto = UserCreateDTO(
-                        username=username,
-                        balance=0,
-                        telegram_id=telegram_id
+                        username=username, balance=0, telegram_id=telegram_id
                     )
-                    user: UserInDBDTO = await orchestrator.handle_command(Command.REGISTER_OR_GET_USER, dto=user_dto)
+                    user: UserInDBDTO = await orchestrator.handle_command(
+                        Command.REGISTER_OR_GET_USER, dto=user_dto
+                    )
 
                 if use_fsm:
                     # Сохраняем в FSM
-                    message = await event.get_message() if hasattr(event, "get_message") else event.message
+                    message = (
+                        await event.get_message()
+                        if hasattr(event, "get_message")
+                        else event.message
+                    )
                     # logger.info(f"🔍 Event type: {type(event)}")#, attrs: {dir(event)}")
 
                     print("В inject_user")
@@ -42,8 +53,10 @@ def inject_user(use_fsm: bool = True):
                         telegram_id,
                         State.IDLE,
                         context_update={"user": user},
-                        meta=ExpenseMeta(message_id=message.id)
+                        meta=ExpenseMeta(message_id=message.id),
                     )
             return await handler(event, user, *args, **kwargs)
+
         return wrapper
+
     return decorator

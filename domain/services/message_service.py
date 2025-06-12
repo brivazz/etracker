@@ -1,6 +1,7 @@
 from domain.repositories.message_repo import AbstractMessageRepository
 from domain.entities.message import MessageCreate
 
+
 class MessageService:
     def __init__(self, repo: AbstractMessageRepository):
         self.repo = repo

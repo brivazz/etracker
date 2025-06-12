@@ -1,7 +1,6 @@
-# domain/services/user_service.py
-
 from domain.repositories.user_repo import AbstractUserRepository
 from domain.entities.user import UserCreate, UserInDB
+
 
 class UserService:
     def __init__(self, repo: AbstractUserRepository):

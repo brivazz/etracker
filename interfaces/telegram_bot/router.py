@@ -13,27 +13,23 @@ Middleware = Callable[[Callable], Callable]
 
 class Router:
     def __init__(self):
-        self.routes = {
-            "message": [],
-            "callback": []
-        }
-        # хочешь добавить inline_query 
-        # — просто добавь "inline_query": [] 
+        self.routes = {"message": [], "callback": []}
+        # хочешь добавить inline_query
+        # — просто добавь "inline_query": []
         # и используй _register(...)
         self.middlewares: list[Middleware] = []
 
     def use(self, middleware: Middleware):
-        """Например router.use(inject_user())  применится ко всем хендлерам"""
+        """Например router.use(inject_user()) применится ко всем хендлерам"""
         self.middlewares.append(middleware)
 
     def message(self, pattern: Optional[str] = None):
         compiled = re.compile(pattern) if pattern else None
-        return self._register("message", compiled) 
+        return self._register("message", compiled)
 
-
-    def callback(self, data: Union[
-        str, bytes, Pattern[str], Pattern[bytes], Enum, type[Enum]
-    ]):
+    def callback(
+        self, data: Union[str, bytes, Pattern[str], Pattern[bytes], Enum, type[Enum]]
+    ):
         pattern = self._convert_to_pattern(data)
         return self._register("callback", pattern)
 
@@ -65,13 +61,13 @@ class Router:
         # Иначе None
         return None
 
-
     def _register(self, event_type: EventType, pattern: Optional[Pattern]):
         def decorator(handler: Callable[..., Awaitable[None]]):
             for mw in reversed(self.middlewares):
                 handler = mw(handler)
             self.routes[event_type].append((pattern, handler))
             return handler
+
         return decorator
 
     async def register(self, client: TelegramClient):
@@ -82,6 +78,7 @@ class Router:
 
     def autoimport(self, package: Path):
         from interfaces.telegram_bot import handlers
+
         for _, module_name, _ in pkgutil.iter_modules(handlers.__path__):
             importlib.import_module(f"{handlers.__name__}.{module_name}")
 

@@ -8,6 +8,7 @@ class MessageCreate(MixinId, MixinDate):
     text: str = field(default_factory=str)
     # amount:
 
+
 @dataclass
 class MessageInDB(MixinId, MixinDate):
     user_id: int = field(default_factory=int)

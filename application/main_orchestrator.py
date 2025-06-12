@@ -4,7 +4,12 @@ from application.orchestrators.user_orchestrator import UserOrchestrator
 from application.orchestrators.expense_orchestrator import ExpenseOrchestrator
 from application.orchestrators.category_orchestrator import CategoryOrchestrator
 from application.dto.user_dto import UserCreateDTO, UserIdDTO
-from application.dto.expense_dto import ExpenseCreateDTO, ExpenseDeleteDTO, ExpenseHistoryPeriodDTO, ExpenseEditDTO
+from application.dto.expense_dto import (
+    ExpenseCreateDTO,
+    ExpenseDeleteDTO,
+    ExpenseHistoryPeriodDTO,
+    ExpenseEditDTO,
+)
 from application.dto.category_dto import CategoryCreateDTO
 from application.dto.stats_dto import StatsRequestDTO
 from infrastructure.uow.sqlalchemy_uow import SQLAlchemyUnitOfWork
@@ -29,7 +34,7 @@ class MainOrchestrator:
 
             orchestrator = ExpenseOrchestrator(self.uow)
             return await orchestrator.add_expense(dto)
-        
+
         elif command == Command.DELETE_EXPENSE:
             if not isinstance(dto, ExpenseDeleteDTO):
                 raise ValueError("Invalid DTO for delete_expense")
@@ -44,7 +49,7 @@ class MainOrchestrator:
         elif command == Command.GET_EXPENSE_HISTORY:
             if not isinstance(dto, ExpenseHistoryPeriodDTO):
                 raise ValueError("Invalid DTO for get_expense_history")
-            
+
             orchestrator = ExpenseOrchestrator(self.uow)
             return await orchestrator.get_expense_history(dto)
 
@@ -67,7 +72,7 @@ class MainOrchestrator:
 
             orchestrator = CategoryOrchestrator(self.uow)
             return await orchestrator.get_user_categories(dto.user_id)
-        
+
         elif command == Command.ADD_CATEGORY:
             if not isinstance(dto, CategoryCreateDTO):
                 raise ValueError("Invalid DTO for add_category")
@@ -77,5 +82,3 @@ class MainOrchestrator:
 
         else:
             raise ValueError(f"Unknown command: {command}")
-
-

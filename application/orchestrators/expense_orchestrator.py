@@ -2,11 +2,25 @@
 from domain.uow.abstract import AbstractUnitOfWork
 from application.factories.service_factory import get_expense_service
 from domain.entities.expense import ExpenseCreate, ExpenseInDB, ExpenseHistory
-from application.mappers.expense_mapper import ExpenseCreateMapper, ExpenseInDBMapper, ExpenseHistoryMapper, ExpenseHistoryResultMapper, ExpenseEditMapper
+from application.mappers.expense_mapper import (
+    ExpenseCreateMapper,
+    ExpenseInDBMapper,
+    ExpenseHistoryMapper,
+    ExpenseHistoryResultMapper,
+    ExpenseEditMapper,
+)
 from application.mappers.stats_mapper import StatsInDbMapper
-from application.dto.expense_dto import ExpenseCreateDTO, ExpenseInDBDTO, ExpenseHistoryDTO, ExpenseHistoryPeriodDTO, ExpenseEditDTO, ExpenseDeleteDTO
+from application.dto.expense_dto import (
+    ExpenseCreateDTO,
+    ExpenseInDBDTO,
+    ExpenseHistoryDTO,
+    ExpenseHistoryPeriodDTO,
+    ExpenseEditDTO,
+    ExpenseDeleteDTO,
+)
 from application.dto.stats_dto import StatsRequestDTO, StatsInDbDTO, StatsPeriodDTO
 from domain.entities.stats import StatsPeriodSummary, StatsInDb
+
 
 class ExpenseOrchestrator:
     def __init__(self, uow: AbstractUnitOfWork):
@@ -21,7 +35,7 @@ class ExpenseOrchestrator:
     async def add_expense(self, expense: ExpenseCreateDTO) -> ExpenseInDBDTO:
         expense_service = await get_expense_service(self.uow.expense_repo)
         expense_entity = await self.expense_create_mapper.dto_to_entity(expense)
-        expense_entity = await expense_service.add_expense(expense_entity) # type: ignore -> ExpenseInDB
+        expense_entity = await expense_service.add_expense(expense_entity)  # type: ignore -> ExpenseInDB
         expense_dto = await self.expense_indb_mapper.entity_to_dto(expense_entity)
         return expense_dto
 
@@ -30,7 +44,9 @@ class ExpenseOrchestrator:
         last_expense_entity = await expense_service.get_last()
         if not last_expense_entity:
             return None
-        last_expense_dto = await self.expense_indb_mapper.entity_to_dto(last_expense_entity)
+        last_expense_dto = await self.expense_indb_mapper.entity_to_dto(
+            last_expense_entity
+        )
         return last_expense_dto
 
     async def delete_expense(self, expense: ExpenseDeleteDTO) -> bool:
@@ -53,13 +69,11 @@ class ExpenseOrchestrator:
         updated = await self.uow.expense_repo.update(existing_expense)
         return await self.expense_indb_mapper.entity_to_dto(updated)
 
-
     async def get_stats(self, stats_dto: StatsRequestDTO) -> StatsPeriodDTO:
         expense_service = await get_expense_service(self.uow.expense_repo)
 
         period_summary: StatsPeriodSummary = await expense_service.get_stats(
-            user_id=stats_dto.user_id,
-            period=stats_dto.period
+            user_id=stats_dto.user_id, period=stats_dto.period
         )
 
         stats_dto_list: list[StatsInDbDTO] = [
@@ -70,13 +84,17 @@ class ExpenseOrchestrator:
         return StatsPeriodDTO(
             stats=stats_dto_list,
             from_date=period_summary.from_date,
-            to_date=period_summary.to_date
+            to_date=period_summary.to_date,
         )
 
-    async def get_expense_history(self, history_dto: ExpenseHistoryPeriodDTO) -> list[ExpenseHistoryDTO]:
+    async def get_expense_history(
+        self, history_dto: ExpenseHistoryPeriodDTO
+    ) -> list[ExpenseHistoryDTO]:
         expense_service = await get_expense_service(self.uow.expense_repo)
         expense_entity = await self.expense_history_mapper.dto_to_entity(history_dto)
-        history_entities: list[ExpenseHistory] = await expense_service.get_expense_history(expense_entity)
+        history_entities: list[ExpenseHistory] = (
+            await expense_service.get_expense_history(expense_entity)
+        )
 
         return [
             await self.expense_history_resut_mapper.entity_to_dto(e)

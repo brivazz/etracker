@@ -1,7 +1,12 @@
 from datetime import datetime, timedelta
 
 from domain.repositories.expense_repo import AbstractExpenseRepository
-from domain.entities.expense import ExpenseCreate, ExpenseInDB, ExpenseHistory, ExpenseHistoryPeriod
+from domain.entities.expense import (
+    ExpenseCreate,
+    ExpenseInDB,
+    ExpenseHistory,
+    ExpenseHistoryPeriod,
+)
 from domain.entities.stats import StatsInDb, StatsPeriodSummary
 
 
@@ -48,5 +53,9 @@ class ExpenseService:
         stats: list[StatsInDb] = await self.repo.get_stats(user_id, from_date)
         return StatsPeriodSummary(stats=stats, from_date=from_date, to_date=to_date)
 
-    async def get_expense_history(self, expense: ExpenseHistoryPeriod) -> list[ExpenseHistory]:
-        return await self.repo.get_expense_history(user_id=expense.user_id, period=expense.period)
+    async def get_expense_history(
+        self, expense: ExpenseHistoryPeriod
+    ) -> list[ExpenseHistory]:
+        return await self.repo.get_expense_history(
+            user_id=expense.user_id, period=expense.period
+        )

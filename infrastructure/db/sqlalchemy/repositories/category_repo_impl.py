@@ -9,12 +9,12 @@ from infrastructure.db.sqlalchemy.models import UserORM
 from infrastructure.db.sqlalchemy.models import CategoryORM
 from application.mappers.category_mapper import CategoryMapper, CategoryInDBMapper
 
+
 class SQLAlchemyCategoryRepository(AbstractCategoryRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
         self.category_create_mapper = CategoryMapper()
         self.category_indb_mapper = CategoryInDBMapper()
-
 
     async def add(self, category: CategoryCreate) -> CategoryInDb:
         try:
@@ -22,7 +22,9 @@ class SQLAlchemyCategoryRepository(AbstractCategoryRepository):
             self.session.add(category_orm)
             await self.session.flush()
             await self.session.refresh(category_orm)
-            category_entity = await self.category_indb_mapper.orm_to_entity(category_orm)
+            category_entity = await self.category_indb_mapper.orm_to_entity(
+                category_orm
+            )
             return category_entity
         except IntegrityError:
             await self.session.rollback()
@@ -31,9 +33,13 @@ class SQLAlchemyCategoryRepository(AbstractCategoryRepository):
             existing_orm = result.scalar_one_or_none()
 
             if not existing_orm:
-                raise ValueError(f"Category with name '{category.name}' exists, but not found in DB")
+                raise ValueError(
+                    f"Category with name '{category.name}' exists, but not found in DB"
+                )
 
-            category_entity = await self.category_indb_mapper.orm_to_entity(existing_orm)
+            category_entity = await self.category_indb_mapper.orm_to_entity(
+                existing_orm
+            )
             return category_entity
 
     async def get_user_categories(self, user_id: int) -> list[CategoryInDb] | list:
@@ -45,5 +51,7 @@ class SQLAlchemyCategoryRepository(AbstractCategoryRepository):
         result = await self.session.execute(stmt)
         user = result.unique().scalar_one_or_none()
         if not user:
-                return []
-        return [await self.category_indb_mapper.orm_to_entity(e) for e in user.categories]
+            return []
+        return [
+            await self.category_indb_mapper.orm_to_entity(e) for e in user.categories
+        ]
