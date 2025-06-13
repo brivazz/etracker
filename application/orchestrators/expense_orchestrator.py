@@ -1,7 +1,7 @@
 # логика добавления, получения, редактирования расходов
 from domain.uow.abstract import AbstractUnitOfWork
 from application.factories.service_factory import get_expense_service
-from domain.entities.expense import ExpenseCreate, ExpenseInDB, ExpenseHistory
+from domain.entities.expense import ExpenseHistory
 from application.mappers.expense_mapper import (
     ExpenseCreateMapper,
     ExpenseInDBMapper,
@@ -29,7 +29,7 @@ class ExpenseOrchestrator:
         self.expense_indb_mapper = ExpenseInDBMapper()
         self.stats_mapper = StatsInDbMapper()
         self.expense_history_mapper = ExpenseHistoryMapper()
-        self.expense_history_resut_mapper = ExpenseHistoryResultMapper()
+        self.expense_history_result_mapper = ExpenseHistoryResultMapper()
         self.expense_edit_mapper = ExpenseEditMapper()
 
     async def add_expense(self, expense: ExpenseCreateDTO) -> ExpenseInDBDTO:
@@ -97,6 +97,6 @@ class ExpenseOrchestrator:
         )
 
         return [
-            await self.expense_history_resut_mapper.entity_to_dto(e)
+            await self.expense_history_result_mapper.entity_to_dto(e)
             for e in history_entities
         ]

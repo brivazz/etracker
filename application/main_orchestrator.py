@@ -12,12 +12,12 @@ from application.dto.expense_dto import (
 )
 from application.dto.category_dto import CategoryCreateDTO
 from application.dto.stats_dto import StatsRequestDTO
-from infrastructure.uow.sqlalchemy_uow import SQLAlchemyUnitOfWork
+from domain.uow.abstract import AbstractUnitOfWork
 from application.commands.command_enum import Command
 
 
 class MainOrchestrator:
-    def __init__(self, uow: SQLAlchemyUnitOfWork):
+    def __init__(self, uow: AbstractUnitOfWork):
         self.uow = uow
 
     async def handle_command(self, command: Command, dto: BaseModel):
