@@ -1,0 +1,54 @@
+@startuml
+skinparam rectangle {
+    BackgroundColor #eef
+    BorderColor #444
+}
+
+' ==== Interfaces ====
+package "Interfaces" {
+    [Telegram Bot]
+    [REST API]
+}
+
+' ==== Application Layer ====
+package "Application Layer" {
+    [Orchestrators]
+    [DTOs]
+    [Mappers]
+    [Factories]
+    [Unit of Work]
+}
+
+' ==== Domain Layer ====
+package "Domain Layer" {
+    [Entities]
+    [Domain Services]
+    [Repositories]
+}
+
+' ==== Infrastructure Layer ====
+package "Infrastructure Layer" {
+    [SQLAlchemy Models]
+    [SQLAlchemy Repos]
+    [SQLAlchemy UoW]
+}
+
+' ==== Connections ====
+[Telegram Bot] --> [Orchestrators]
+[REST API] --> [Orchestrators]
+
+[Orchestrators] --> [DTOs]
+[Orchestrators] --> [Mappers]
+[Orchestrators] --> [Unit of Work]
+[Orchestrators] --> [Factories]
+
+[Factories] --> [Domain Services]
+[Unit of Work] --> [Repositories]
+[Domain Services] --> [Entities]
+[Domain Services] --> [Repositories]
+
+[Repositories] --> [SQLAlchemy Repos]
+[SQLAlchemy Repos] --> [SQLAlchemy Models]
+[Unit of Work] --> [SQLAlchemy UoW]
+
+@enduml
